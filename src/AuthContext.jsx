@@ -5,8 +5,9 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
-  const [role, setRole] = useState(null); // 'owner' | 'staff' | null
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [roleDebug, setRoleDebug] = useState('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -30,8 +31,13 @@ export function AuthProvider({ children }) {
       .select('role')
       .eq('id', userId)
       .single();
-    if (!error && data) setRole(data.role);
-    else setRole('staff'); // safe default if no row found
+    if (!error && data) {
+      setRole(data.role);
+      setRoleDebug(`OK: role=${data.role}`);
+    } else {
+      setRole('staff');
+      setRoleDebug(`FALLBACK to staff. Error: ${error ? error.message : 'no data returned'} | userId=${userId}`);
+    }
     setLoading(false);
   }
 
@@ -45,7 +51,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, role, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, role, loading, signIn, signOut, roleDebug }}>
       {children}
     </AuthContext.Provider>
   );
