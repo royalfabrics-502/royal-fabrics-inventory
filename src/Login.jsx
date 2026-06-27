@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from './AuthContext';
 
 export default function Login() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,7 +35,23 @@ export default function Login() {
           </label>
           <label>
             <span>Password</span>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            <div className="login-password-wrap">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="login-eye-btn"
+                onClick={() => setShowPassword(s => !s)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </label>
           {error && <div className="login-error">{error}</div>}
           <button type="submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign In'}</button>
@@ -107,6 +125,15 @@ const LOGIN_CSS = `
   outline: none; border-color: rgba(212,160,23,0.7); background: rgba(255,255,255,0.18);
   box-shadow: 0 0 0 3px rgba(212,160,23,0.2);
 }
+.login-password-wrap { position: relative; display: flex; align-items: center; }
+.login-password-wrap input { width: 100%; padding-right: 42px; }
+.login-eye-btn {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; padding: 4px; cursor: pointer;
+  color: rgba(255,255,255,0.55); display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: color 0.15s, background 0.15s;
+}
+.login-eye-btn:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.08); }
 .login-form button {
   margin-top: 8px; padding: 13px; border-radius: 10px; border: none;
   background: linear-gradient(135deg, #d4a017 0%, #b8860b 100%); color: #1a1206;
