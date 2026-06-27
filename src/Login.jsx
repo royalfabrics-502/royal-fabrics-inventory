@@ -77,12 +77,12 @@ const LOGIN_CSS = `
 
 .login-card {
   position: relative; z-index: 1;
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.13);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: 20px; padding: 38px 30px; max-width: 380px; width: 100%;
-  box-shadow: 0 30px 70px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  box-shadow: 0 30px 70px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15);
   text-align: center;
 }
 .login-badge {
@@ -94,18 +94,18 @@ const LOGIN_CSS = `
   margin: 0 0 6px; font-size: 24px; color: #f5f1e8; font-weight: 800;
   font-family: 'Manrope', 'Inter', sans-serif; letter-spacing: 0.01em;
 }
-.login-sub { color: rgba(255,255,255,0.55); font-size: 13px; margin: 0 0 26px; letter-spacing: 0.01em; }
+.login-sub { color: rgba(255,255,255,0.72); font-size: 13px; margin: 0 0 26px; letter-spacing: 0.01em; }
 
 .login-form { display: flex; flex-direction: column; gap: 16px; text-align: left; }
-.login-form label { display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.65); letter-spacing: 0.02em; text-transform: uppercase; }
+.login-form label { display: flex; flex-direction: column; gap: 7px; font-size: 12.5px; font-weight: 700; color: rgba(255,255,255,0.85); letter-spacing: 0.02em; text-transform: uppercase; }
 .login-form input {
-  padding: 12px 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; font-size: 15px;
-  background: rgba(255,255,255,0.05); color: #f5f1e8; transition: border-color 0.2s, background 0.2s;
+  padding: 12px 14px; border: 1px solid rgba(255,255,255,0.25); border-radius: 10px; font-size: 15px;
+  background: rgba(255,255,255,0.14); color: #ffffff; transition: border-color 0.2s, background 0.2s;
 }
-.login-form input::placeholder { color: rgba(255,255,255,0.3); }
+.login-form input::placeholder { color: rgba(255,255,255,0.45); }
 .login-form input:focus {
-  outline: none; border-color: rgba(212,160,23,0.6); background: rgba(255,255,255,0.08);
-  box-shadow: 0 0 0 3px rgba(212,160,23,0.15);
+  outline: none; border-color: rgba(212,160,23,0.7); background: rgba(255,255,255,0.18);
+  box-shadow: 0 0 0 3px rgba(212,160,23,0.2);
 }
 .login-form button {
   margin-top: 8px; padding: 13px; border-radius: 10px; border: none;
@@ -120,11 +120,11 @@ const LOGIN_CSS = `
   background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.3); color: #fca5a5;
   font-size: 12.5px; padding: 9px 11px; border-radius: 8px;
 }
-.login-hint { font-size: 11.5px; color: rgba(255,255,255,0.32); margin-top: 22px; line-height: 1.5; }
+.login-hint { font-size: 11.5px; color: rgba(255,255,255,0.55); margin-top: 22px; line-height: 1.5; }
 
 .login-credit {
-  position: relative; z-index: 1; margin-top: 28px; font-size: 12px;
-  color: rgba(255,255,255,0.3); letter-spacing: 0.02em; text-align: center; line-height: 1.7;
+  position: relative; z-index: 1; margin-top: 28px; font-size: 12.5px;
+  color: rgba(255,255,255,0.65); letter-spacing: 0.02em; text-align: center; line-height: 1.7;
 }
 .login-credit span {
   color: rgba(212,160,23,0.85); font-weight: 700; font-size: 17px;
