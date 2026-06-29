@@ -5,7 +5,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
-  const [role, setRole] = useState(null);
+  const [role, setRole] = useState(null); // 'owner' | 'staff' | null
   const [loading, setLoading] = useState(true);
   const [roleDebug, setRoleDebug] = useState('');
 
@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
       setRole(data.role);
       setRoleDebug(`OK: role=${data.role}`);
     } else {
-      setRole('staff');
+      setRole('staff'); // safe default if no row found
       setRoleDebug(`FALLBACK to staff. Error: ${error ? error.message : 'no data returned'} | userId=${userId}`);
     }
     setLoading(false);
@@ -50,8 +50,18 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
   }
 
+  async function changePassword(newPassword) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    return { error };
+  }
+
+  async function changeEmail(newEmail) {
+    const { error } = await supabase.auth.updateUser({ email: newEmail });
+    return { error };
+  }
+
   return (
-    <AuthContext.Provider value={{ session, role, loading, signIn, signOut, roleDebug }}>
+    <AuthContext.Provider value={{ session, role, loading, signIn, signOut, roleDebug, changePassword, changeEmail }}>
       {children}
     </AuthContext.Provider>
   );
@@ -60,3 +70,4 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
