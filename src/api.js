@@ -21,6 +21,12 @@ export async function deleteYarnEntry(id) {
   const { error } = await supabase.from('yarn_entries').delete().eq('id', id);
   if (error) throw error;
 }
+export async function updateYarnEntry(id, entry) {
+  const row = { direction: entry.direction, party: entry.party, quality: entry.quality, qty: entry.qty, unit: entry.unit, rate: entry.rate || 0, date: entry.date, note: entry.note };
+  const { error } = await supabase.from('yarn_entries').update(row).eq('id', id);
+  if (error) throw error;
+  return { id, ...entry };
+}
 
 // ---------- PRODUCTION ----------
 export async function fetchProduction() {
@@ -56,6 +62,12 @@ export async function insertFabricEntry(entry) {
 export async function deleteFabricEntry(id) {
   const { error } = await supabase.from('fabric_entries').delete().eq('id', id);
   if (error) throw error;
+}
+export async function updateFabricEntry(id, entry) {
+  const row = { direction: entry.direction, party: entry.party, outlet_id: entry.outletId || null, quality: entry.quality, qty: entry.qty, unit: entry.unit, rate: entry.rate || 0, date: entry.date, note: entry.note };
+  const { error } = await supabase.from('fabric_entries').update(row).eq('id', id);
+  if (error) throw error;
+  return { id, ...entry };
 }
 
 // ---------- OUTLETS ----------
@@ -121,6 +133,12 @@ export async function deletePayment(id) {
   const { error } = await supabase.from('payment_entries').delete().eq('id', id);
   if (error) throw error;
 }
+export async function updatePayment(id, payment) {
+  const row = { direction: payment.direction, party: payment.party, amount: payment.amount, mode: payment.mode, date: payment.date, note: payment.note };
+  const { error } = await supabase.from('payment_entries').update(row).eq('id', id);
+  if (error) throw error;
+  return { id, ...payment };
+}
 
 // ---------- EXPENSES ----------
 export async function fetchExpenses() {
@@ -139,3 +157,26 @@ export async function deleteExpense(id) {
   const { error } = await supabase.from('expense_entries').delete().eq('id', id);
   if (error) throw error;
 }
+export async function updateExpense(id, expense) {
+  const row = { category: expense.category, amount: expense.amount, date: expense.date, note: expense.note };
+  const { error } = await supabase.from('expense_entries').update(row).eq('id', id);
+  if (error) throw error;
+  return { id, ...expense };
+}
+
+// ---------- STAFF / USER ROLES ----------
+export async function fetchUserRoles() {
+  const { data, error } = await supabase.from('user_roles').select('*').order('created_at', { ascending: true });
+  if (error) throw error;
+  return data.map(r => ({ id: r.id, email: r.email, role: r.role }));
+}
+export async function updateUserRole(id, role) {
+  const { error } = await supabase.from('user_roles').update({ role }).eq('id', id);
+  if (error) throw error;
+}
+export async function deleteUserRole(id) {
+  const { error } = await supabase.from('user_roles').delete().eq('id', id);
+  if (error) throw error;
+}
+
+                         
