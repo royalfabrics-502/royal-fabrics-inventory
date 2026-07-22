@@ -1,15 +1,47 @@
 import { supabase } from './supabaseClient';
+import { cache } from '../packages/cache/index.js';
+import { CORE_EVENTS, publishEvent } from '../packages/events/index.js';
+import { createInMemorySearchProvider, registerSearchProvider } from '../packages/search/index.js';
 import {
-  localGetAll, localPut, localPutMany, localDelete,
+  localGetAll, localPut, localPutMany,
   localReplaceAll, enqueuePendingOp, getPendingOps, removePendingOp,
 } from './db';
 
 // Generic helpers per table. Each function maps js camelCase fields
 // to the snake_case columns used in the database, and back.
 
-const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+const uid = () => crypto.randomUUID();
 
 const isOnline = () => navigator.onLine;
+
+const inventoryTables = new Set(['yarn_entries', 'production_entries', 'fabric_entries', 'outlet_stock_moves', 'outlet_sales']);
+
+function eventNameFor(table, action) {
+  if (inventoryTables.has(table)) {
+    if (action === 'insert') return CORE_EVENTS.INVENTORY_CREATED;
+    if (action === 'update') return CORE_EVENTS.INVENTORY_UPDATED;
+    if (action === 'delete') return CORE_EVENTS.INVENTORY_DELETED;
+  }
+  if (action === 'insert') return CORE_EVENTS.RECORD_CREATED;
+  if (action === 'update') return CORE_EVENTS.RECORD_UPDATED;
+  return CORE_EVENTS.RECORD_DELETED;
+}
+
+function changedColumns(beforeRow, afterRow) {
+  const keys = new Set([...Object.keys(beforeRow || {}), ...Object.keys(afterRow || {})]);
+  return [...keys].filter((key) => JSON.stringify(beforeRow?.[key]) !== JSON.stringify(afterRow?.[key]));
+}
+
+async function publishRecordEvent(table, action, beforeRow, afterRow) {
+  await publishEvent(eventNameFor(table, action), {
+    table,
+    action,
+    recordId: afterRow?.id || beforeRow?.id,
+    before: beforeRow || null,
+    after: afterRow || null,
+    changedColumns: changedColumns(beforeRow, afterRow),
+  });
+}
 
 // ── Sync engine: flush pending ops to Supabase when online ────
 export async function syncPendingToSupabase() {
@@ -27,7 +59,7 @@ export async function syncPendingToSupabase() {
         const { error } = await supabase.from(op.table).insert(op.payload);
         if (error) throw error;
       } else if (op.action === 'delete') {
-        const { error } = await supabase.from(op.table).delete().eq('id', op.payload.id);
+        const { error } = await supabase.from(op.table).update({ deleted_at: op.payload.deleted_at || new Date().toISOString() }).eq('id', op.payload.id);
         if (error) throw error;
       } else if (op.action === 'update') {
         const { id, ...rest } = op.payload;
@@ -74,10 +106,15 @@ export async function refreshAllFromSupabase() {
 
 // ── Helper: write to local + optionally to Supabase ──────────
 async function writeRecord(table, action, row) {
-  // Always write locally first
-  if (action === 'insert') await localPut(table, row);
-  if (action === 'delete') await localDelete(table, row.id);
-  if (action === 'update') await localPut(table, row);
+  const beforeRow = action === 'insert' ? null : (await localGetAll(table)).find((record) => record.id === row.id) || null;
+  const afterRow = action === 'delete' ? { ...beforeRow, ...row, deleted_at: new Date().toISOString() } : row;
+
+  // Always write locally first; deletes are soft-deleted to preserve ERP history.
+  if (action === 'insert') await localPut(table, afterRow);
+  if (action === 'delete') await localPut(table, afterRow);
+  if (action === 'update') await localPut(table, afterRow);
+  cache.invalidateTag(table);
+  await publishRecordEvent(table, action, beforeRow, afterRow);
 
   if (isOnline()) {
     try {
@@ -85,7 +122,7 @@ async function writeRecord(table, action, row) {
         const { error } = await supabase.from(table).insert(row);
         if (error) throw error;
       } else if (action === 'delete') {
-        const { error } = await supabase.from(table).delete().eq('id', row.id);
+        const { error } = await supabase.from(table).update({ deleted_at: afterRow.deleted_at }).eq('id', row.id);
         if (error) throw error;
       } else if (action === 'update') {
         const { id, ...rest } = row;
@@ -95,11 +132,11 @@ async function writeRecord(table, action, row) {
     } catch (e) {
       // Online write failed — queue for later sync
       console.warn('Online write failed, queuing:', e.message);
-      await enqueuePendingOp({ table, action, payload: row });
+      await enqueuePendingOp({ table, action, payload: afterRow });
     }
   } else {
     // Offline — queue for sync
-    await enqueuePendingOp({ table, action, payload: row });
+    await enqueuePendingOp({ table, action, payload: afterRow });
     // Register background sync if available
     if ('serviceWorker' in navigator && 'SyncManager' in window) {
       const reg = await navigator.serviceWorker.ready;
@@ -111,16 +148,25 @@ async function writeRecord(table, action, row) {
 // ── Helper: read local cache, refresh from network if online ─
 async function readRecords(table, mapFn) {
   // Always return local cache immediately (fast)
-  const local = await localGetAll(table);
-  if (local.length > 0) return local.map(mapFn);
+  const cacheKey = `records:${table}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached.map(mapFn);
+
+  const local = (await localGetAll(table)).filter((record) => !record.deleted_at);
+  if (local.length > 0) {
+    cache.set(cacheKey, local, { ttlMs: 30000, tags: [table] });
+    return local.map(mapFn);
+  }
 
   // If cache is empty and online, fetch from Supabase
   if (isOnline()) {
     const { data, error } = await supabase.from(table).select('*').order('date', { ascending: false });
     if (error) throw error;
     if (data) {
+      const activeData = data.filter((record) => !record.deleted_at);
       await localPutMany(table, data);
-      return data.map(mapFn);
+      cache.set(cacheKey, activeData, { ttlMs: 30000, tags: [table] });
+      return activeData.map(mapFn);
     }
   }
   return [];
@@ -331,4 +377,20 @@ export async function deleteUserRole(id) {
   if (!isOnline()) throw new Error('Internet connection required to remove staff.');
   const { error } = await supabase.from('user_roles').delete().eq('id', id);
   if (error) throw error;
+}
+
+
+export const inventorySearchProvider = createInMemorySearchProvider([], ['party', 'quality', 'unit', 'note']);
+registerSearchProvider('inventory', inventorySearchProvider);
+
+export async function refreshInventorySearchIndex() {
+  const records = [
+    ...(await localGetAll('yarn_entries')),
+    ...(await localGetAll('production_entries')),
+    ...(await localGetAll('fabric_entries')),
+    ...(await localGetAll('outlet_stock_moves')),
+    ...(await localGetAll('outlet_sales')),
+  ].filter((record) => !record.deleted_at);
+  inventorySearchProvider.setRecords(records);
+  return records.length;
 }
