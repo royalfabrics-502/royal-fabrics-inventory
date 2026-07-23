@@ -58,3 +58,14 @@ a row for them the same way we did for Owner, with `role = 'staff'`).
 Staff accounts can use Yarn, Production, Fabric, and Outlets, but not
 Payments, Expenses, or Reports — those stay Owner-only, enforced both in the
 app's menu and at the database level.
+
+## Platform architecture foundation
+
+Royal Apex is moving to a reusable, event-driven enterprise core before Sprint 3 begins.
+
+- `packages/events` provides an in-browser event bus so important domain actions can publish events without directly calling Notifications, Audit, Analytics, Omni AI, or Reports.
+- `packages/cache` provides a memory cache abstraction today, with the same API shape ready to swap for Redis or another distributed cache later.
+- `packages/search` provides a pluggable global search registry so Inventory, CRM, Treasury, Reports, and Omni can register providers independently.
+- `supabase/migrations/202607220001_platform_core.sql` defines platform tables for feature flags, editions, tenant configuration, upgraded audit diffs, soft-delete metadata, UUID defaults, and uploaded-file deduplication metadata.
+
+Sprint 3 can now build Apex Inventory from the database upward while keeping modules independent through published events instead of direct cross-module calls.
